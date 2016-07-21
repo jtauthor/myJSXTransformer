@@ -25,21 +25,12 @@ function parseContent(content){
 function toString(tagObj){
     //input: {type:type,props:props,children:children}
     //output: React.createElement(tagObj.type,tagObj.props,tagObj.children)
-    if(typeof tagObj.children[0] == 'object'){
-        return "React.createElement(\"" + tagObj.type + "\"," + JSON.stringify(tagObj.props) + "," + children2String(tagObj.children) + ")";
+    if(typeof tagObj.children == 'string'){
+        return "React.createElement(\"" + tagObj.type + "\"," + JSON.stringify(tagObj.props) + ",\"" + tagObj.children + "\")";
     }
     else{
-        return "React.createElement(\"" + tagObj.type + "\"," + JSON.stringify(tagObj.props) + ",\"" + tagObj.children[0] + "\")";
+        return "React.createElement(\"" + tagObj.type + "\"," + JSON.stringify(tagObj.props) + "," + tagObj.children.map(toString).join(',') + ")";
     }
-}
-
-function children2String(children){
-    //input: [{},{}]
-    //output:
-    return children.reduce(function(result,child){
-        return result + toString(child) + ",";
-    },"");
-
 }
 
 function isJSXExp(tokens){
@@ -55,23 +46,23 @@ function parseATag(tokens){
     return parseATag2(tokens,0);
 }
 
-function parseATag2(tokens,idx){
-    //input: ["<","div","abc","=",""hehe"","def","=",""haha"",">","尼玛","<","/div",">"]
-    let type = tokens[idx + 1];
-    let props = parseProps(tokens,idx + 2);
-    let children = parseChildren(tokens,props.newIdx + 1);
-    let element = {
-        type:type,
-        props:props.value,
-        children:children.map(function(child){return child.value})
-    };
-
-    return new ParserItem(element,children[children.length-1].newIdx);
-}
-
 function ParserItem(value,newIdx){
     this.value = value || {};
     this.newIdx = newIdx || {};
+}
+
+function parseATag2(tokens,idx){
+    //input: ["<","div","abc","=",""hehe"","def","=",""haha"",">","尼玛","<","/div",">"]
+    let type = tokens[idx + 1];
+    let propsItem = parseProps(tokens,idx + 2);
+    let childrenItem = parseChildren(tokens,propsItem.newIdx + 1);
+    let element = {
+        type:type,
+        props:propsItem.value,
+        children:childrenItem.value
+    };
+
+    return new ParserItem(element,childrenItem.newIdx + 3);
 }
 
 function parseProps(tokens,idx){
@@ -95,20 +86,17 @@ function parseChildren(tokens,idx){
     let token = tokens[idx];
     if(token === '<'){
         let tagToken = parseATag2(tokens,idx);
-        let childrens = [];
-        childrens.push(tagToken);
-        if(tokens[tagToken.newIdx][0] === '/'){
-            return childrens;
+        let childrens = [tagToken.value];
+        if(tokens[tagToken.newIdx + 1][0] === '/'){
+            return new ParserItem(childrens,tagToken.newIdx);
         }
         else{
-            let restItems = parseChildren(tokens,tagToken.newIdx + 3);
-            return childrens.concat(restItems);
+            let restItems = parseChildren(tokens,tagToken.newIdx);
+            return new ParserItem(childrens.concat(restItems.value),restItems.newIdx);
         }
     }
     else{
-        let item = [token];
-        item.newIdx = idx + 1;
-        return item;
+        return new ParserItem(token,idx + 1);
     }
 }
 

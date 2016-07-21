@@ -1,1 +1,1 @@
-React.createElement("div",{"class":"\"hehe\"","abc":"\"def\""},"undefined")
+React.createElement("div",{"class":"\"hehe\"","abc":"\"def\""},React.createElement("div",{},"上面的div"),React.createElement("div",{},"下面的div"))
